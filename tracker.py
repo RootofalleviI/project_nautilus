@@ -2,13 +2,6 @@ from datetime import datetime
 from config import *
 import os
 
-fmt_date = '%Y-%m-%d'
-fmt_time = '%H:%M:%S'
-fmt_date_time = '%Y-%m-%d %H:%M:%S'
-
-with open(TASK_NAME_CACHE, 'r+') as task_name_cache:
-    task_keys = [task.strip() for task in task_name_cache.readlines()]
-
 
 def file_is_empty(path):
     """ Returns True if the file is empty. """
@@ -43,6 +36,7 @@ def write_start_time_cache(start_date, start_time, task_name, path=START_TIME_CA
         f.write(start_date + '\n')
         f.write(start_time + '\n')
         f.write(task_name + '\n')
+        f.flush()
 
 
 def write_time_data(task_name, duration, start_date, start_time, end_date, end_time, message,
@@ -51,10 +45,11 @@ def write_time_data(task_name, duration, start_date, start_time, end_date, end_t
     Assumption on file format (columns):
     task_name, duration, start_date, start_time, end_date, end_time, message
     """
-    entry = "{}, {}, {}, {}, {}, {}, {}".format(task_name, duration, start_date, start_time,
-                                                end_date, end_time, message)
+    entry = "{},{},{},{},{},{},{}".format(task_name, duration, start_date, start_time,
+                                          end_date, end_time, message)
     with open(path, 'a') as f:
         f.write(entry + '\n')
+        f.flush()
 
 
 def start(task_name):
@@ -89,7 +84,7 @@ def validate_start(task_name):
               "      Creating empty START_TIME_CACHE file.", sep='\n')
 
     now = datetime.now()
-    now_date, now_time = now.strftime(fmt_date), now.strftime(fmt_time)
+    now_date, now_time = now.strftime(FMT_DATE), now.strftime(FMT_TIME)
     print("Starting task {} at time {}.".format(task_name, now_time))
     write_start_time_cache(now_date, now_time, task_name)
     print("Data saved successfully. Enjoy!")
@@ -99,17 +94,20 @@ def stop(message):
     try:
         start_date, start_time, task_name = read_start_time_cache()
         now = datetime.now()
-        now_date, now_time = now.strftime(fmt_date), now.strftime(fmt_time)
+        now_date, now_time = now.strftime(FMT_DATE), now.strftime(FMT_TIME)
         print("Stopping task {} at time {}.".format(task_name, now_time))
         start_date_time = start_date + ' ' + start_time
         end_date_time = now_date + ' ' + now_time
-        duration = datetime.strptime(end_date_time, fmt_date_time) - \
-            datetime.strptime(start_date_time, fmt_date_time)
-        if len(str(duration)) != 8:
+        duration = datetime.strptime(end_date_time, FMT_DATE_TIME) - \
+            datetime.strptime(start_date_time, FMT_DATE_TIME)
+        if len(str(duration)) > 8:
             raise ValueError()
-        print("You have invested {} in {}.".format(duration, task_name))
+        h, m, s = str(duration).split(':')
+        duration = int(h) * 60 + int(m)
+        print("You have invested {} minutes in {}.".format(duration, task_name))
         write_time_data(task_name, duration, start_date, start_time, now_date, now_time, message)
         clear_file(START_TIME_CACHE)
+        modified = True
         print("Data saved successfully. Take a break!")
 
     except FileNotFoundError:
@@ -124,3 +122,34 @@ def stop(message):
         print("THE FOLLOWING ERROR HAS BEEN THROWN:")
         print(e)
         print("PLEASE LOOK AT THE SOURCE CODE OR CONTACT THE DEVELOPER.")
+
+
+def add_task(task_name):
+    task_name = task_name.lower()
+    if task_name == '':
+        print("ERROR: missing argument.")
+        return
+    if task_name not in task_keys:
+        task_keys.append(task_name)
+        with open(TASK_NAME_CACHE, 'a') as f:
+            f.write(task_name + '\n')
+            f.flush()
+        print("New task {} has been added.".format(task_name))
+    else:
+        print("Task {} has been added already.".format(task_name))
+
+
+def rm_task(task_name):
+    task_name = task_name.lower()
+    if task_name == '':
+        print("ERROR: missing argument.")
+        return
+    if task_name in task_keys:
+        task_keys.remove(task_name)
+        with open(TASK_NAME_CACHE, 'w') as f:
+            for task in task_keys:
+                f.write(task + '\n')
+            f.flush()
+        print("Existing task {} has been removed.".format(task_name))
+    else:
+        print("Task {} does not exist.".format(task_name))
