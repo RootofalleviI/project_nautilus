@@ -1,10 +1,14 @@
 import cmd
-from tracker import *
+from trackers import *
 from lscat import *
 from config import *
+from tracker.start import start
+from tracker.stop import stop
 
 
 class Interpreter(cmd.Cmd):
+
+    # Hide EOF from showing up in man page
     __hidden_methods = ('do_EOF',)
 
     intro = "Welcome to Project Nautilus! Type help or ? to list commands."
@@ -12,13 +16,23 @@ class Interpreter(cmd.Cmd):
 
     # noinspection PyMethodMayBeStatic
     def do_start(self, args):
-        """`start <task_name>`: start a new tracker. `<task_name>` must be registered already."""
-        start(args)
+        """`start <task_name>`: start the timer. `<task_name>` must be registered already."""
+        if not args:
+            print("ERROR: missing argument: <task_name>.",
+                  "`start <task_name>`: start timer. `<task_name>` must be registered already.", sep='\n')
+        elif args not in task_keys:
+            print(f"ERROR: `{args}` is not registered. You can register it with `add_task {args}`")
+        else:
+            start(args)
 
     # noinspection PyMethodMayBeStatic
     def do_stop(self, args):
-        """`stop <message>`: stop the tracker. Relevant data will be written to data center."""
-        stop(args)
+        """`stop <message>`: stop the tracker and write relevant data to database."""
+        if not args:
+            print("ERROR: missing argument: <message>.",
+                  "`stop <message>`: stop the tracker and write relevant data to database.", sep='\n')
+        else:
+            stop(args)
 
     # noinspection PyMethodMayBeStatic
     def do_tasks(self, _):
@@ -45,6 +59,11 @@ class Interpreter(cmd.Cmd):
     def do_ls(self, args):
         """`ls [<task_name>] [--today|--week|--month|--year]`: list all records on a task in a time period."""
         lscat('ls', args)
+
+    # noinspection PyMethodMayBeStatic
+    def do_add_record(self, args):
+        """`add_record [<task_name>]`: add a record."""
+        add_record(args)
 
     # noinspection PyMethodMayBeStatic
     def default(self, _):
