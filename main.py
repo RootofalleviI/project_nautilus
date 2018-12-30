@@ -37,18 +37,32 @@ class Interpreter(cmd.Cmd):
     # noinspection PyMethodMayBeStatic
     def do_tasks(self, _):
         """`tasks`: list all registered tasks."""
-        print("You have saved the following tasks:")
-        print(task_keys)
+        if _:
+            print(f"ERROR: unexpected argument {_}."
+                  "`tasks`: list all registered tasks.", sep='\n')
+        else:
+            print("You have registered the following tasks:")
+            for task_key in task_keys:
+                print(f"'{task_key}'", end=', ')
+            print()
 
     # noinspection PyMethodMayBeStatic
     def do_add_task(self, args):
         """`add_task <task_name>`: register a new task."""
-        add_task(args.strip())
+        if not args:
+            print("ERROR: missing argument: <task_name>.",
+                  "`add_task <task_name>`: register a new task.", sep='\n')
+        else:
+            add_task(args.strip())
 
     # noinspection PyMethodMayBeStatic
     def do_rm_task(self, args):
         """`rm_task <task_name>`: unregister an existing task."""
-        rm_task(args.strip())
+        if not args:
+            print("ERROR: missing argument: <task_name>.",
+                  "`rm_task <task_name>`: unregister an existing task.", sep='\n')
+        else:
+            rm_task(args.strip())
 
     # noinspection PyMethodMayBeStatic
     def do_cat(self, args):

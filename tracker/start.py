@@ -37,7 +37,7 @@ def check_existing_tracker():
             while True:
                 response = input()
                 if response == 'n':
-                    print("You entered `n`. The existing record is discarded.")
+                    print("The existing record is discarded.")
                     break
                 elif response == 'y':
                     print("You entered `y`.")  # todo: finish this
