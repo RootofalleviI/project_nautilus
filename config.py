@@ -10,8 +10,6 @@ FMT_DATE = '%Y-%m-%d'
 FMT_TIME = '%H:%M:%S'
 FMT_DATE_TIME = '%Y-%m-%d %H:%M:%S'
 
-modified = False
-
 try:
     with open(TASK_NAME_CACHE, 'r') as task_name_cache:
         task_keys = [task.strip() for task in task_name_cache.readlines()]

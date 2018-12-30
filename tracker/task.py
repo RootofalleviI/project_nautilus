@@ -7,7 +7,8 @@ def add_task(task_name):
     Function: register a new task in TASK_NAME_CACHE
 
     Precondition on argument `task_name`:
-    - `task_name` is non-empty and whitespaces are stripped already.
+    - `task_name` is non-empty and is registered in global object task_keys as the the input validation has already been
+    handled by the do_start() function in interpreter stage.
     """
     task_name = task_name.lower()
     if task_name not in task_keys:

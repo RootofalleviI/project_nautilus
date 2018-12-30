@@ -1,4 +1,3 @@
-import os
 from config import *
 
 
@@ -27,6 +26,7 @@ def read_start_time_cache(file_path=START_TIME_CACHE):
     with open(file_path, 'r') as f:
         start_info = (x.strip() for x in f.readlines())
     return start_info
+
 
 def write_time_data(task_name, duration, start_date, start_time, end_date, end_time, message, path=DATA_CENTER):
     """ Given relevant information, write to database (CSV file).
