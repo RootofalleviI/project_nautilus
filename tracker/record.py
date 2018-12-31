@@ -5,7 +5,7 @@ from config import *
 
 def collect_info(prompt, validation):
     while True:
-        response = input(prompt)
+        response = input(prompt).strip()
         if validation(response):
             return response
         else:
@@ -13,10 +13,11 @@ def collect_info(prompt, validation):
 
 
 def validation_date(date_text):
-    try:
-        datetime.strptime(date_text, FMT_DATE)
-    except ValueError:
-        return False
+    if date_text:
+        try:
+            datetime.strptime(date_text, FMT_DATE)
+        except ValueError:
+            return False
     return True
 
 
@@ -35,20 +36,27 @@ def add_record(task_name):
     Function: add an untracked record (more prompts to further collection info)
 
     Precondition on argument `message`:
-    - `message` is an non-empty string as the the input validation has already been handled by the do_stop() function in
-    interpreter stage.
+    - `message` is an non-empty string as the the input validation has already been handled by the do_stop() function
+    in interpreter stage.
     """
-    start_date = collect_info("Enter start_date in YYYY-mm-dd format: ", validation_date)
+    start_date = collect_info("Enter start_date in YYYY-mm-dd format (empty => start_date = today): ",
+                              validation_date)
+    if not start_date:
+        start_date = datetime.now().strftime(FMT_DATE)
+
     start_time = collect_info("Enter start_time in HH:MM:SS format: ", validation_time)
 
     start_date_as_date = datetime.strptime(start_date, FMT_DATE)
     start_date_time_as_datetime = datetime.strptime(start_date + ' ' + start_time, FMT_DATE_TIME)
 
     while True:
-        end_date = collect_info("Enter end_date in YYYY-mm-dd format: ", validation_date)
+        end_date = collect_info("Enter end_date in YYYY-mm-dd format (empty => end_date = start_date): ",
+                                validation_date)
+        if not end_date:
+            end_date = start_date
         end_date_as_date = datetime.strptime(end_date, FMT_DATE)
         if (start_date_as_date <= end_date_as_date) and \
-            (end_date_as_date - timedelta(days=1) <= start_date_as_date <= end_date_as_date):
+                (end_date_as_date - timedelta(days=1) <= start_date_as_date <= end_date_as_date):
             break
         else:
             print("ERROR: end_date is more than 1 day after start_date or end_date is before start_date.",
@@ -78,9 +86,9 @@ def add_record(task_name):
           f"start_time: {start_time}",
           f"end_date: {end_date}",
           f"end_time: {end_time}",
-          f"message: {message}")
-    response = input()
+          f"message: {message}", sep='\n')
     while True:
+        response = input()
         if response == 'N':
             return
         elif response == 'Y':
@@ -88,8 +96,7 @@ def add_record(task_name):
         else:
             print("Sorry, I don't understand. Please try again.")
 
-    duration = datetime.strptime(end_date_time_as_datetime, FMT_DATE_TIME) - \
-               datetime.strptime(start_date_time_as_datetime, FMT_DATE_TIME)
+    duration = end_date_time_as_datetime - start_date_time_as_datetime
 
     h, m, s = str(duration).split(':')
     duration = int(h) * 60 + int(m)
