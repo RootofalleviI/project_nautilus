@@ -17,9 +17,12 @@ def lscat(cmd: str, args: str) -> None:
     :param args: length <= 2, specifies relevant task or time period.
     :return: None
     """
-    if modified:
+    global df_modified
+    if df_modified:
         global df
-        df = pd.read_csv(DATA_CENTER, header=0)
+        df = pd.read_csv(DATA_CENTER, names=['task_name', 'duration', 'start_date', 'start_time',
+                                             'end_date', 'end_time', 'message'])
+        df_modified = False
 
     time_flag = task_flag = None
     args = args.split()

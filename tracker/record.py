@@ -23,7 +23,7 @@ def validation_date(date_text):
 
 def validation_time(time_text):
     try:
-        datetime.strptime(time_text, FMT_TIME)
+        datetime.strptime(time_text + ':00', FMT_TIME)
     except ValueError:
         return False
     return True
@@ -44,7 +44,7 @@ def add_record(task_name):
     if not start_date:
         start_date = datetime.now().strftime(FMT_DATE)
 
-    start_time = collect_info("Enter start_time in HH:MM:SS format: ", validation_time)
+    start_time = collect_info("Enter start_time in HH:MM format: ", validation_time) + ':00'
 
     start_date_as_date = datetime.strptime(start_date, FMT_DATE)
     start_date_time_as_datetime = datetime.strptime(start_date + ' ' + start_time, FMT_DATE_TIME)
@@ -63,7 +63,7 @@ def add_record(task_name):
                   "Please try again.", sep='\n')
 
     while True:
-        end_time = collect_info("Enter end_time in HH:MM:SS format: ", validation_time)
+        end_time = collect_info("Enter end_time in HH:MM format: ", validation_time)  + ':00'
         end_date_time_as_datetime = datetime.strptime(end_date + ' ' + end_time, FMT_DATE_TIME)
         if (start_date_time_as_datetime <= end_date_time_as_datetime) and \
             (end_date_time_as_datetime - timedelta(hours=24) <=
