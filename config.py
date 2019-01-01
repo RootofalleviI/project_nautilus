@@ -10,6 +10,7 @@ FMT_DATE = '%Y-%m-%d'
 FMT_TIME = '%H:%M:%S'
 FMT_DATE_TIME = '%Y-%m-%d %H:%M:%S'
 
+# If modified, reload the dataframe
 modified = False
 
 try:
@@ -27,4 +28,3 @@ except FileNotFoundError:
         data_center.write('task_name,duration,start_date,start_time,end_date,end_time,message\n')
         data_center.flush()
     df = pd.read_csv(DATA_CENTER, header=0)
-
