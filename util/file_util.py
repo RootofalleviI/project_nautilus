@@ -37,5 +37,6 @@ def write_time_data(task_name, duration, start_date, start_time, end_date, end_t
     with open(path, 'a') as f:
         f.write(entry + '\n')
         f.flush()
+    global df_modified
     df_modified = True
 
