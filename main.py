@@ -1,15 +1,15 @@
 import cmd
 import os
 from datetime import date
-from pathlib import Path
+
+import config
+
 import pandas as pd
 from tabulate import tabulate
 import numpy as np
 
 
-HOME = str(Path.home())
-PROJECT_ROOT_URL = HOME + '/.nautilus'
-DATA_CENTER = PROJECT_ROOT_URL + "/.data/daily"
+
 
 DEBUG = True
 
