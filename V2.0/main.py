@@ -28,7 +28,8 @@ class Interpreter(cmd.Cmd):
         if not os.path.isfile(today_record_path):
             start = [format_time(x) for x in list(pd.timedelta_range(0, periods=48, freq="30T"))]
             finish = start[1:] + ['00:00']
-            columns = ['start', 'finish', 'category', 'title', 'description']
+            # columns = ['start', 'finish', 'category', 'title', 'description']
+            columns = ['start', 'finish', 'title']
             df = pd.DataFrame(index=range(1, 49), columns=columns)
             df['start'], df['finish'] = start, finish
             df.to_csv(today_record_path)
@@ -37,10 +38,11 @@ class Interpreter(cmd.Cmd):
 
     def do_add(self, args):
         """`add <start> <finish> <title> <description>"""
-        arg_lst = args.split(' ', 3)
-        if len(arg_lst) != 4:
+        arg_lst = args.split(' ', 2)
+        if len(arg_lst) != 3:
             print("Error: Wrong number of arguments. \nUsage: `add <start> <finish> <title> <description>")
-        start, finish, title, description = arg_lst
+        # start, finish, title, description = arg_lst
+        start, finish, title = arg_lst
         start_idx = int(start[:2]) * 2 + 1 + (start[2:] == '30')
         finish_idx = int(finish[:2]) * 2 + 1 + (finish[2:] == '30')
         for x in range(start_idx, finish_idx):
@@ -48,20 +50,29 @@ class Interpreter(cmd.Cmd):
                 print("title assigned.")
             else:
                 self.df.loc[x,'title'] = title
-            if self.df.loc[x,'description'] != 'None':
-                print("desc assigned")
-            else:
-                self.df.loc[x,'description'] = description
-        print(self.df)
-        print(self.df.dtypes)
+            # if self.df.loc[x,'description'] != 'None':
+            #     print("desc assigned")
+            # else:
+            #     self.df.loc[x,'description'] = description
+        # print(self.df)
+        # print(self.df.dtypes)
 
     def do_read(self, _):
-        print(tabulate(self.df, headers=['id', 'start', 'finish', 'category', 'title', 'description']))
+        # print(tabulate(self.df, headers=['id', 'start', 'finish', 'category', 'title', 'description']))
+        print(tabulate(self.df, headers=['id', 'start', 'finish', 'title']))
         print(self.df.dtypes)
+
+    def do_cat(self, _):
+        temp = self.df.groupby('title')['start'].nunique().apply(lambda x: str(x / 2) + "hour").sort_values(ascending=False)
+        print(temp)
 
     def do_bye(self, _):
         print("Bye")
         return True
+
+    def postloop(self):
+        self.df.to_csv(today_record_path)
+        print(f"Data written to {today_record_path}.")
 
 def format_time(i):
     return ':'.join(str(i).split()[-1].split(':')[:2])
