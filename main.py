@@ -111,10 +111,12 @@ class Interpreter(cmd.Cmd):
     def do_cat(self, _):
         """`cat`: view today's summary"""
         data = self.df.groupby('title')['start'].nunique().apply(lambda x: x/2).sort_values(ascending=False)
-        untracked = data['N/A']
-        data = data.drop('N/A', axis=0)
+        if 'N/A' in data.index:
+            untracked = data['N/A']
+            data = data.drop('N/A', axis=0)
+            print(f"\nUntracked: {untracked} hours.")
         print(tabulate([(x, hr) for x, hr in zip(data.index, data)], headers=['Activity', 'Hours'], numalign='right'))
-        print(f"\nUntracked: {untracked} hours.")
+
 
     def do_bye(self, _):
         """`bye`: cy@"""
