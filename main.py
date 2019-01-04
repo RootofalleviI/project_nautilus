@@ -36,8 +36,8 @@ class Interpreter(cmd.Cmd):
         # Read self.df from today's record. This will be the main object for us to work with.
         self.df = pd.read_csv(today_record_path, index_col=0)
 
-        # Replace all NaNs with empty strings. This makes our life easier when dealing with updates.
-        self.df.fillna('', inplace=True)
+        # Replace all NaNs with empty 'N/A'. This makes our life easier when dealing with updates and cats.
+        self.df.fillna('N/A', inplace=True)
 
     def do_add(self, args):
         """`add <start-finish> <title> [<description>]`: add a record.
@@ -76,10 +76,10 @@ class Interpreter(cmd.Cmd):
         # Extract start and finish
         time_args = arg_lst[0].split('-')
         if len(time_args) == 1:
-            start = time_args[0] if time_args else '0000'
+            start = time_args[0] if time_args[0] else '0000'
             finish = str(int(start[:2]) + 1) + '00' if start[-2:] == '30' else start[:2] + '30'
         elif len(time_args) == 2:
-            start, finish = time_args[0], time_args[1] if time_args[1] else '2400'
+            start, finish = time_args[0] if time_args[0] else '0000', time_args[1] if time_args[1] else '2400'
 
         # Calculating which rows the activity affects.
         start_idx = int(start[:2]) * 2 + 1 + (start[2:] == '30')
@@ -87,22 +87,29 @@ class Interpreter(cmd.Cmd):
 
         # Updating each row. todo: figure out if there is a more elegant way to do this.
         for x in range(start_idx, finish_idx):
-
+            x_start = str((x - 1) // 2).rjust(2, '0') + ':' + ('30' if (x - 1) % 2 == 1 else '00')
+            x_end = str(int(x_start[:2]) + 1).rjust(2, '0') + ':00' if x_start[-2:] == '30' else x_start[:2] + ':30'
             # Skip if the row has existing data.
-            if self.df.loc[x, 'title']:
-                print(f"Time period {x} has existing data. Skipped.")
+            if self.df.loc[x, 'title'] != 'N/A':
+                print(f"Time period {x_start}-{x_end} has existing data. Skipped.")
             else:
                 self.df.loc[x, 'title'] = title
                 self.df.loc[x, 'description'] = description
-
+                print(f"Time period {x_start}-{x_end} has been updated: title={title}, description={description}")
 
     def do_read(self, _):
-        print(tabulate(self.df, headers=['id', 'start', 'finish', 'title', 'description'], tablefmt="grid"))
+        print(tabulate(self.df, headers=['#', 'start', 'finish', 'title', 'description']))
+
+    def do_write(self, _):
+        self.df.to_csv(today_record_path)
 
     def do_cat(self, _):
-        temp = self.df.groupby('title')['start'].nunique().apply(lambda x: str(x / 2) + "hour").sort_values(
-            ascending=False)
-        print(temp)
+        data = self.df.groupby('title')['start'].nunique().sort_values(ascending=False)
+        unassigned = data['N/A']
+        data = data.drop('N/A', axis=0)
+        print(data)
+        print(f"\nUnassigned: {unassigned}")
+
 
     def do_bye(self, _):
         print("Bye")
