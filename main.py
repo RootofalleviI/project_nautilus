@@ -6,7 +6,6 @@ from config import *
 
 import pandas as pd
 from tabulate import tabulate
-import numpy as np
 
 DEBUG = True
 
@@ -14,7 +13,7 @@ today_string = date.today().strftime('%Y-%m-%d,%A')
 today_record_path = DATA_CENTER + f'/{today_string}.csv'
 
 
-# noinspection PyAttributeOutsideInit
+# noinspection PyAttributeOutsideInit,PyMethodMayBeStatic
 class Interpreter(cmd.Cmd):
     intro = "Welcome to Project Nautilus V2.0! Type help or ? to list commands."
     prompt = "(project nautilus) "
@@ -67,7 +66,8 @@ class Interpreter(cmd.Cmd):
         # Extract title and description
         arg_lst = args.split(' ', 2)
         if len(arg_lst) < 2:
-            print("Error: missing argument. \nUsage: `add <start[-finish]> <title> [<description>]`: add a record.")
+            raise Exception("Error: missing argument."
+                            "Usage: `add <start[-finish]> <title> [<description>]`: add a record.")
         elif len(arg_lst) == 2:
             title, description = arg_lst[1], ''
         else:
@@ -80,6 +80,9 @@ class Interpreter(cmd.Cmd):
             finish = str(int(start[:2]) + 1) + '00' if start[-2:] == '30' else start[:2] + '30'
         elif len(time_args) == 2:
             start, finish = time_args[0] if time_args[0] else '0000', time_args[1] if time_args[1] else '2400'
+        else:
+            raise Exception("Error: <start-finish> not in the correct format."
+                            "Usage: `add <start[-finish]> <title> [<description>]`: add a record.")
 
         # Calculating which rows the activity affects.
         start_idx = int(start[:2]) * 2 + 1 + (start[2:] == '30')
@@ -97,21 +100,24 @@ class Interpreter(cmd.Cmd):
                 self.df.loc[x, 'description'] = description
                 print(f"Time period {x_start}-{x_end} has been updated: title={title}, description={description}")
 
-    def do_read(self, _):
+    def do_ls(self, _):
+        """`ls`: view today's record."""
         print(tabulate(self.df, headers=['#', 'start', 'finish', 'title', 'description']))
 
     def do_write(self, _):
+        """`write`: write current data to file."""
         self.df.to_csv(today_record_path)
 
     def do_cat(self, _):
-        data = self.df.groupby('title')['start'].nunique().sort_values(ascending=False)
-        unassigned = data['N/A']
+        """`cat`: view today's summary"""
+        data = self.df.groupby('title')['start'].nunique().apply(lambda x: x/2).sort_values(ascending=False)
+        untracked = data['N/A']
         data = data.drop('N/A', axis=0)
-        print(data)
-        print(f"\nUnassigned: {unassigned}")
-
+        print(tabulate([(x, hr) for x, hr in zip(data.index, data)], headers=['Activity', 'Hours'], numalign='right'))
+        print(f"\nUntracked: {untracked} hours.")
 
     def do_bye(self, _):
+        """`bye`: cy@"""
         print("Bye")
         return True
 
