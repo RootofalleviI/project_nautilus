@@ -62,7 +62,17 @@ class Interpreter(cmd.Cmd):
             3. `add -0800 sleep`        => start=0000, finish=0800, title='sleep', description=''
             4. `add 1530-1630 study Review Stat230` => start=1530, end=1630, title='study', description=`Review Stat230`
         """
+        self._modify(args, False)
 
+    def do_set(self, args):
+        """`set <start-finish> <title> [<description>]`: essentially same as add but instead of skipping when a time
+        period has existing data, this overwrites it. Therefore, make sure you know what you are doing when using this
+        command!"""
+        # Extract title and description
+        self._modify(args, True)
+
+    def _modify(self, args, replace):
+        """Helper function for do_add and do_set."""
         # Extract title and description
         arg_lst = args.split(' ', 2)
         if len(arg_lst) < 2:
@@ -92,9 +102,17 @@ class Interpreter(cmd.Cmd):
         for x in range(start_idx, finish_idx):
             x_start = str((x - 1) // 2).rjust(2, '0') + ':' + ('30' if (x - 1) % 2 == 1 else '00')
             x_end = str(int(x_start[:2]) + 1).rjust(2, '0') + ':00' if x_start[-2:] == '30' else x_start[:2] + ':30'
-            # Skip if the row has existing data.
-            if self.df.loc[x, 'title'] != 'N/A':
-                print(f"Time period {x_start}-{x_end} has existing data. Skipped.")
+
+            # `add`: Skip if the row has existing data.
+            if not replace:
+                if self.df.loc[x, 'title'] != 'N/A':
+                    print(f"Time period {x_start}-{x_end} has existing data. Skipped.")
+                else:
+                    self.df.loc[x, 'title'] = title
+                    self.df.loc[x, 'description'] = description
+                    print(f"Time period {x_start}-{x_end} has been updated: title={title}, description={description}")
+
+            # `set`: Overwrite the rows.
             else:
                 self.df.loc[x, 'title'] = title
                 self.df.loc[x, 'description'] = description
@@ -116,7 +134,6 @@ class Interpreter(cmd.Cmd):
             data = data.drop('N/A', axis=0)
             print(f"\nUntracked: {untracked} hours.")
         print(tabulate([(x, hr) for x, hr in zip(data.index, data)], headers=['Activity', 'Hours'], numalign='right'))
-
 
     def do_bye(self, _):
         """`bye`: cy@"""
