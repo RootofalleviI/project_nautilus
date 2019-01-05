@@ -130,9 +130,9 @@ class Interpreter(cmd.Cmd):
         """`cat`: view today's summary"""
         data = self.df.groupby('title')['start'].nunique().apply(lambda x: x/2).sort_values(ascending=False)
         if 'N/A' in data.index:
-            untracked = data['N/A']
+            not_applicable = data['N/A']
             data = data.drop('N/A', axis=0)
-            print(f"\nUntracked: {untracked} hours.")
+            print(f"\nNot applicable: {not_applicable} hours.")
         print(tabulate([(x, hr) for x, hr in zip(data.index, data)], headers=['Activity', 'Hours'], numalign='right'))
 
     def do_bye(self, _):
