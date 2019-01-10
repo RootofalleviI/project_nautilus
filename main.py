@@ -7,10 +7,15 @@ from config import *
 import pandas as pd
 from tabulate import tabulate
 
+TRIAL = True
 DEBUG = True
 
-today_string = date.today().strftime('%Y-%m-%d,%A')
-today_record_path = DATA_CENTER + f'/{today_string}.csv'
+if DEBUG:
+    today_string = '2019-01-01,Tuesday'
+else:
+    today_string = date.today().strftime('%Y-%m-%d,%A')
+today_record_path = SRC_DATA + f'/{today_string}.csv'
+today_summary_path = ETL_DATA + f'/{today_string}.csv'
 
 
 # noinspection PyAttributeOutsideInit,PyMethodMayBeStatic
@@ -20,15 +25,31 @@ class Interpreter(cmd.Cmd):
 
     def preloop(self):
         """Runs before cmdloop()."""
-        # Check if DATA_CENTER directory has been mkdir'ed. If not, mkdir it.
-        if not os.path.exists(DATA_CENTER):
-            os.makedirs(DATA_CENTER)
+        # Check if SRC_DATA directory has been mkdir'ed. If not, mkdir it.
+        if not os.path.exists(SRC_DATA):
+            os.makedirs(SRC_DATA)
+
+        # Check if ETL_DATA directory has been mkdir'ed. If not, mkdir it.
+        if not os.path.exists(ETL_DATA):
+            os.makedirs(ETL_DATA)
+
+        # Check if TASK_NAME file exists. If not, prompt the user to create it and quit.
+        if not TRIAL and not os.path.isfile(ACTIVITY_CACHE):
+            print("ACTIVITY_CACHE does not exist!")  # todo: finish this
+            return False
+        else:
+            self.activities = {}
+            with open(ACTIVITY_CACHE, 'r') as f:
+                for line in f:
+                    lst = line.split(':')
+                    assert len(lst) == 2, ValueError("ACTIVITY_CACHE is corrupted: two colons in a line.")
+                    self.activities[lst[0]] = [x.strip(' \n').lower() for x in lst[1].split(',')]
 
         # Check if today's record has been initialized. If not, initialize it.
         if not os.path.isfile(today_record_path):
             start = [':'.join(str(x).split()[-1].split(':')[:2]) for x in pd.timedelta_range(0, periods=48, freq="30T")]
             finish = start[1:] + ['00:00']
-            df = pd.DataFrame(index=range(1, 49), columns=['start', 'finish', 'title', 'description'])
+            df = pd.DataFrame(index=range(1, 49), columns=['start', 'finish', 'category', 'title', 'description'])
             df['start'], df['finish'] = start, finish
             df.to_csv(today_record_path)
 
@@ -71,6 +92,7 @@ class Interpreter(cmd.Cmd):
         # Extract title and description
         self._modify(args, True)
 
+    # noinspection PyUnboundLocalVariable
     def _modify(self, args, replace):
         """Helper function for do_add and do_set."""
         # Extract title and description
@@ -82,6 +104,14 @@ class Interpreter(cmd.Cmd):
             title, description = arg_lst[1], ''
         else:
             title, description = arg_lst[1], arg_lst[2]
+
+        if not TRIAL:
+            assert self.activity_exists(title), ValueError("Activity does not exist.")
+
+        # Figure out category
+        for c, activities in self.activities.items():
+            if title in activities:
+                category = c
 
         # Extract start and finish
         time_args = arg_lst[0].split('-')
@@ -110,35 +140,83 @@ class Interpreter(cmd.Cmd):
                 else:
                     self.df.loc[x, 'title'] = title
                     self.df.loc[x, 'description'] = description
-                    print(f"Time period {x_start}-{x_end} has been updated: title={title}, description={description}")
+                    self.df.loc[x, 'category'] = category
+                    print(f"Time period {x_start}-{x_end} has been updated: category={category}, title={title}, "
+                          f"description={description}")
 
             # `set`: Overwrite the rows.
             else:
                 self.df.loc[x, 'title'] = title
                 self.df.loc[x, 'description'] = description
-                print(f"Time period {x_start}-{x_end} has been updated: title={title}, description={description}")
+                self.df.loc[x, 'category'] = category
+                print(f"Time period {x_start}-{x_end} has been updated: category={category}, title={title}, "
+                      f"description={description}")
 
-    def do_ls(self, _):
+    def do_act(self, _):
+        """`act`: view all registered activities."""
+        for k, v in self.activities.items():
+            print(k, ':', v)
+
+    def do_ls(self, args):
         """`ls`: view today's record."""
-        print(tabulate(self.df, headers=['#', 'start', 'finish', 'title', 'description']))
+        if args:
+            assert args in self.activities.keys(), ValueError("ls: Unknown category.")
+            self._ls_category(args)
+        else:
+            print(tabulate(self.df, headers=['#', 'start', 'finish', 'category', 'title', 'description']))
+
+    def _ls_category(self, category):
+        """view today's record on a specified category."""
+        data = self.df[self.df['category'] == category]
+        print(tabulate(data, headers=['#', 'start', 'finish', 'category', 'title', 'description']))
 
     def do_write(self, _):
         """`write`: write current data to file."""
         self.df.to_csv(today_record_path)
 
-    def do_cat(self, _):
+    def do_summarize(self, _):
+        """`summarize`: summarize time usage to file."""
+        data = self.df.groupby(['category', 'title'])['start'].nunique() \
+            .sort_values(ascending=False).apply(lambda x: x/2)
+        data.to_csv(today_summary_path)
+        print(tabulate([(x, hr) for x, hr in zip(data.index, data)],
+                       headers=['Activity', 'Hour(s)'], numalign='right', tablefmt='grid'))
+
+    def do_cat(self, args):
         """`cat`: view today's summary"""
-        data = self.df.groupby('title')['start'].nunique().apply(lambda x: x/2).sort_values(ascending=False)
-        if 'N/A' in data.index:
-            not_applicable = data['N/A']
-            data = data.drop('N/A', axis=0)
-            print(f"\nNot applicable: {not_applicable} hours.")
-        print(tabulate([(x, hr) for x, hr in zip(data.index, data)], headers=['Activity', 'Hours'], numalign='right'))
+        if args:
+            if args == '--all':
+                for k in self.activities.keys():
+                    self._cat_category(k)
+            else:
+                assert args in self.activities.keys(), ValueError("cat: Unknown category.")
+                self._cat_category(args)
+        else:
+            data_category = self.df.groupby('category')['start'].nunique()\
+                .sort_values(ascending=False).apply(lambda x: x/2)
+            if 'N/A' in data_category.index:
+                not_applicable = data_category['N/A']
+                data_category = data_category.drop('N/A', axis=0)
+                print(f"\nNot applicable: {not_applicable} hours.")
+            print(tabulate([(x, hr) for x, hr in zip(data_category.index, data_category)],
+                           headers=['Category', 'Hour(s)'], numalign='right', tablefmt='grid'))
+
+    def _cat_category(self, category):
+        """view today's summary on a specified category"""
+        print(f"> Data on {category}:")
+        data = self.df[self.df['category'] == category].groupby(['category', 'title'])['start'].nunique()\
+            .sort_values(ascending=False).apply(lambda x: x/2)
+        print(tabulate([(x, hr) for x, hr in zip(data.index, data)],
+                       headers=['Activity', 'Hour(s)'], numalign='right', tablefmt='grid'))
 
     def do_bye(self, _):
         """`bye`: cy@"""
         print("Bye")
         return True
+
+    def activity_exists(self, activity):
+        """Check if the activity is recorded in self.activities (or ACTIVITY_CACHE)."""
+        return activity in [x for sublist in self.activities.values() for x in sublist]
 
     def postloop(self):
         self.df.to_csv(today_record_path)
