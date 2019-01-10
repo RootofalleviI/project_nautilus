@@ -11,6 +11,8 @@
 - add: add a record
 - ls: view today's record
 - cat: view today's summary
+- set: update/modify a record
+
 
 ### Category and Activities
 > **Rules**:
@@ -34,12 +36,13 @@
     - application: job-application stuff, such as writing resume and doing interviews
     - work
 - Music
-    - vioiln
+    - violin
     - viola
     - piano
-    - mucic
+    - music
 - PP: stands for *productive procrastination*, things I do when I don't want to touch math or code 
     - cfa: studying CFA (Chartered Financial Analyst) Level 1 for fun
+    - reading
     - pp
 - Health
     - food
@@ -52,8 +55,8 @@
     - traffic
     - prep: morning/evening routine, house cleaning, etc.
     - appointment: docter/dental appointments, etc.
+    - phone: social media on phone
     - downtime
-
 
  
 ### Features coming soon
