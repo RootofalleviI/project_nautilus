@@ -14,7 +14,8 @@ if DEBUG:
     today_string = '2019-01-01,Tuesday'
 else:
     today_string = date.today().strftime('%Y-%m-%d,%A')
-today_record_path = DATA_CENTER + f'/{today_string}.csv'
+today_record_path = SRC_DATA + f'/{today_string}.csv'
+today_summary_path = ETL_DATA + f'/{today_string}.csv'
 
 
 # noinspection PyAttributeOutsideInit,PyMethodMayBeStatic
@@ -24,9 +25,13 @@ class Interpreter(cmd.Cmd):
 
     def preloop(self):
         """Runs before cmdloop()."""
-        # Check if DATA_CENTER directory has been mkdir'ed. If not, mkdir it.
-        if not os.path.exists(DATA_CENTER):
-            os.makedirs(DATA_CENTER)
+        # Check if SRC_DATA directory has been mkdir'ed. If not, mkdir it.
+        if not os.path.exists(SRC_DATA):
+            os.makedirs(SRC_DATA)
+
+        # Check if ETL_DATA directory has been mkdir'ed. If not, mkdir it.
+        if not os.path.exists(ETL_DATA):
+            os.makedirs(ETL_DATA)
 
         # Check if TASK_NAME file exists. If not, prompt the user to create it and quit.
         if not TRIAL and not os.path.isfile(ACTIVITY_CACHE):
@@ -169,11 +174,23 @@ class Interpreter(cmd.Cmd):
         """`write`: write current data to file."""
         self.df.to_csv(today_record_path)
 
+    def do_summarize(self, _):
+        """`summarize`: summarize time usage to file."""
+        data = self.df.groupby(['category', 'title'])['start'].nunique() \
+            .sort_values(ascending=False).apply(lambda x: x/2)
+        data.to_csv(today_summary_path)
+        print(tabulate([(x, hr) for x, hr in zip(data.index, data)],
+                       headers=['Activity', 'Hour(s)'], numalign='right', tablefmt='grid'))
+
     def do_cat(self, args):
         """`cat`: view today's summary"""
         if args:
-            assert args in self.activities.keys(), ValueError("cat: Unknown category.")
-            self._cat_category(args)
+            if args == '--all':
+                for k in self.activities.keys():
+                    self._cat_category(k)
+            else:
+                assert args in self.activities.keys(), ValueError("cat: Unknown category.")
+                self._cat_category(args)
         else:
             data_category = self.df.groupby('category')['start'].nunique()\
                 .sort_values(ascending=False).apply(lambda x: x/2)
@@ -191,7 +208,6 @@ class Interpreter(cmd.Cmd):
             .sort_values(ascending=False).apply(lambda x: x/2)
         print(tabulate([(x, hr) for x, hr in zip(data.index, data)],
                        headers=['Activity', 'Hour(s)'], numalign='right', tablefmt='grid'))
-
 
     def do_bye(self, _):
         """`bye`: cy@"""
