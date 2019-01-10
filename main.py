@@ -152,24 +152,46 @@ class Interpreter(cmd.Cmd):
         for k, v in self.activities.items():
             print(k, ':', v)
 
-    def do_ls(self, _):
+    def do_ls(self, args):
         """`ls`: view today's record."""
-        print(tabulate(self.df, headers=['#', 'start', 'finish', 'category', 'title', 'description']))
+        if args:
+            assert args in self.activities.keys(), ValueError("ls: Unknown category.")
+            self._ls_category(args)
+        else:
+            print(tabulate(self.df, headers=['#', 'start', 'finish', 'category', 'title', 'description']))
+
+    def _ls_category(self, category):
+        """view today's record on a specified category."""
+        data = self.df[self.df['category'] == category]
+        print(tabulate(data, headers=['#', 'start', 'finish', 'category', 'title', 'description']))
 
     def do_write(self, _):
         """`write`: write current data to file."""
         self.df.to_csv(today_record_path)
 
-    def do_cat(self, _):
+    def do_cat(self, args):
         """`cat`: view today's summary"""
-        data = self.df.set_index(['category', 'title'], drop=False)
-        print(data)
-        # data = self.df.groupby('title')['start'].nunique().apply(lambda x: x/2).sort_values(ascending=False)
-        # if 'N/A' in data.index:
-        #     not_applicable = data['N/A']
-        #     data = data.drop('N/A', axis=0)
-        #     print(f"\nNot applicable: {not_applicable} hours.")
-        # print(tabulate([(x, hr) for x, hr in zip(data.index, data)], headers=['Activity', 'Hours'], numalign='right'))
+        if args:
+            assert args in self.activities.keys(), ValueError("cat: Unknown category.")
+            self._cat_category(args)
+        else:
+            data_category = self.df.groupby('category')['start'].nunique()\
+                .sort_values(ascending=False).apply(lambda x: x/2)
+            if 'N/A' in data_category.index:
+                not_applicable = data_category['N/A']
+                data_category = data_category.drop('N/A', axis=0)
+                print(f"\nNot applicable: {not_applicable} hours.")
+            print(tabulate([(x, hr) for x, hr in zip(data_category.index, data_category)],
+                           headers=['Category', 'Hour(s)'], numalign='right', tablefmt='grid'))
+
+    def _cat_category(self, category):
+        """view today's summary on a specified category"""
+        print(f"> Data on {category}:")
+        data = self.df[self.df['category'] == category].groupby(['category', 'title'])['start'].nunique()\
+            .sort_values(ascending=False).apply(lambda x: x/2)
+        print(tabulate([(x, hr) for x, hr in zip(data.index, data)],
+                       headers=['Activity', 'Hour(s)'], numalign='right', tablefmt='grid'))
+
 
     def do_bye(self, _):
         """`bye`: cy@"""
