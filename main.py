@@ -7,7 +7,7 @@ from config import *
 import pandas as pd
 from tabulate import tabulate
 
-TRIAL = True
+TRIAL = False
 DEBUG = True
 
 if DEBUG:
@@ -123,6 +123,11 @@ class Interpreter(cmd.Cmd):
         else:
             raise Exception("Error: <start-finish> not in the correct format."
                             "Usage: `add <start[-finish]> <title> [<description>]`: add a record.")
+
+        if len(finish) == 3:
+            finish = '0' + finish
+        if len(start) == 3:
+            start = '0' + start
 
         # Calculating which rows the activity affects.
         start_idx = int(start[:2]) * 2 + 1 + (start[2:] == '30')
