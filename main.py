@@ -2,10 +2,14 @@ import cmd
 import os
 from datetime import date
 
+import plotly.offline as py
+import plotly.graph_objs as go
+
 from config import *
 
 import pandas as pd
 from tabulate import tabulate
+
 
 TRIAL = True
 DEBUG = True
@@ -16,7 +20,6 @@ else:
     today_string = date.today().strftime('%Y-%m-%d,%A')
 today_record_path = SRC_DATA + f'/{today_string}.csv'
 today_summary_path = ETL_DATA + f'/{today_string}.csv'
-
 
 # noinspection PyAttributeOutsideInit,PyMethodMayBeStatic
 class Interpreter(cmd.Cmd):
@@ -58,6 +61,8 @@ class Interpreter(cmd.Cmd):
 
         # Replace all NaNs with empty 'N/A'. This makes our life easier when dealing with updates and cats.
         self.df.fillna('N/A', inplace=True)
+
+        self.data_category = None
 
     def do_add(self, args):
         """`add <start-finish> <title> [<description>]`: add a record.
@@ -192,13 +197,13 @@ class Interpreter(cmd.Cmd):
                 assert args in self.activities.keys(), ValueError("cat: Unknown category.")
                 self._cat_category(args)
         else:
-            data_category = self.df.groupby('category')['start'].nunique()\
+            self.data_category = self.df.groupby('category')['start'].nunique()\
                 .sort_values(ascending=False).apply(lambda x: x/2)
-            if 'N/A' in data_category.index:
-                not_applicable = data_category['N/A']
-                data_category = data_category.drop('N/A', axis=0)
+            if 'N/A' in self.data_category.index:
+                not_applicable = self.data_category['N/A']
+                data_category = self.data_category.drop('N/A', axis=0)
                 print(f"\nNot applicable: {not_applicable} hours.")
-            print(tabulate([(x, hr) for x, hr in zip(data_category.index, data_category)],
+            print(tabulate([(x, hr) for x, hr in zip(self.data_category.index, self.data_category)],
                            headers=['Category', 'Hour(s)'], numalign='right', tablefmt='grid'))
 
     def _cat_category(self, category):
@@ -221,6 +226,23 @@ class Interpreter(cmd.Cmd):
     def postloop(self):
         self.df.to_csv(today_record_path)
         print(f"Data written to {today_record_path}.")
+
+    def do_plot(self, args):
+        # todo: ask someone for color palette
+        if not self.data_category:
+            self.do_cat('')
+        labels = list(self.data_category.index)
+        values = self.data_category
+        trace = go.Pie(
+            labels=labels, values=values,
+            textinfo='label+value',
+            hoverinfo='label+value+percent',
+            textfont={'size': 20}
+        )
+        py.plot([trace], filename='basic_pie_chart.html', auto_open=True)
+
+
+
 
 
 if __name__ == '__main__':
