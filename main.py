@@ -1,6 +1,6 @@
 import cmd
 import os
-from datetime import date
+from datetime import date, datetime
 
 from config import *
 
@@ -11,7 +11,7 @@ TRIAL = False
 DEBUG = True
 
 if DEBUG:
-    today_string = '2019-01-01,Tuesday'
+    today_string = '2019-01-12,Saturday'
 else:
     today_string = date.today().strftime('%Y-%m-%d,%A')
 today_record_path = SRC_DATA + f'/{today_string}.csv'
@@ -22,6 +22,18 @@ today_summary_path = ETL_DATA + f'/{today_string}.csv'
 class Interpreter(cmd.Cmd):
     intro = "Welcome to Project Nautilus V2.0! Type help or ? to list commands."
     prompt = "(project nautilus) "
+
+    def do_load(self, args):
+        """Load data from a certain day."""
+        # todo: validate args has length 1 and is a date string
+        try:
+            datetime_str, fmt = args, '%Y-%m-%d'
+            datetime_obj = datetime.strptime(datetime_str, fmt)
+            loaded_str = datetime_obj.strftime('%Y-%m-%d,%A')
+            loaded_record_path = SRC_DATA + f'/{loaded_str}.csv'
+        except:
+            print("Not a valid date or data source not found!")
+
 
     def preloop(self):
         """Runs before cmdloop()."""
